@@ -42,3 +42,12 @@ The deployment keeps other directories on `gh-pages`.
 The build and local tests pass. The four source sites returned HTTP 403 during the live check.
 MangaBat returned a Cloudflare challenge header. This computer cannot confirm live reading in the iOS app.
 Complete the device checks in [the backport notes](docs/backport-0.8.md) before you use this branch as a stable release.
+
+## HTTP 403 or Cloudflare check
+
+Open the source home page in Paperback and tap the cloud icon.
+Complete the check in that window. Then return and refresh the source.
+The source does not start the check automatically.
+
+Version `1.0.1` gives these instructions in the error message.
+It does not remove the website check. If the error remains after the check, report that result.

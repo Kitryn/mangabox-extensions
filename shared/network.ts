@@ -15,7 +15,8 @@ export class MangaboxInterceptor implements SourceInterceptor {
     return request;
   }
   async interceptResponse(response: Response): Promise<Response> {
-    // Keep challenge responses intact. Paperback 0.8 handles the bypass.
+    // Keep challenge responses intact for the source error handler.
+    // In Paperback 0.8, the user starts the check with the cloud icon.
     if (
       response.status === 403 ||
       response.status === 503 ||

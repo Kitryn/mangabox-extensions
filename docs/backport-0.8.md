@@ -43,7 +43,7 @@ Adding the field alone does not convert the runtime API or bundle layout.
 | Bundle         | `index.js`, `info.json`, `static/icon.png`            | `source.js`, repository index, `includes/icon.png` |
 
 The backport keeps the source IDs, domains, manga IDs, and chapter IDs.
-The source version is `1.0.0`. It is greater than the original prerelease version.
+The source version is `1.0.1`. It is greater than the original prerelease version.
 The default request rate is 0.25 requests per second. MangaKakalot uses one request per second.
 The 0.8 rate limit cannot reproduce the 0.9 burst and image settings exactly.
 
@@ -89,3 +89,13 @@ The SDK is fixed at 0.8.7 to keep the 0.8 API. A dependency security review is o
 8. Repeat these checks for each source you use.
 
 Cloudflare completion and image download behavior require the device check.
+
+## Cloudflare follow-up
+
+The device test confirmed installation. MangaNato then returned HTTP 403.
+The first error message did not identify the cloud icon in Paperback.
+Version `1.0.1` corrects that instruction. It does not claim to solve the website challenge.
+
+The [0.8 MangaBox reference](https://github.com/TheNetsky/extensions-generic-0.8/blob/07976d7243ffb9a8112020b6a166fbfd23971919/src/MangaBox.ts) directs the user to the source home page and cloud icon.
+The backport already supplies the bypass intent and request method used for this action.
+A device check is still required after the user completes the challenge.

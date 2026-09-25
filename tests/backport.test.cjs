@@ -151,7 +151,7 @@ test("request errors and invalid chapter data do not return an empty success", a
   );
   await assert.rejects(
     load("MangaBat", () => ({ status: 403 })).source.getMangaDetails("test"),
-    /Cloudflare/,
+    /MangaBat source home page and tap the cloud icon/,
   );
   await assert.rejects(load("MangaBat", () => ({ data: "not JSON" })).source.getChapters("test"));
   await assert.rejects(

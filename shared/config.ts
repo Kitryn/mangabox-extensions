@@ -5,7 +5,7 @@ import { ContentRating, SourceInfo, SourceIntents } from "@paperback/types";
 export function sourceInfo(name: string, domain: string): SourceInfo {
   return {
     name,
-    version: "1.0.0",
+    version: "1.0.1",
     icon: "icon.png",
     language: "en",
     author: "Saw_6, Inkdex",

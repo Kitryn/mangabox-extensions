@@ -65,10 +65,12 @@ export class Mangabox extends Source {
       App.createRequest({ url: this.domain + path, method: "GET" }),
       1,
     );
-    if (response.status !== 200)
+    if (response.status === 403 || response.status === 503)
       throw new Error(
-        `Request failed (${response.status}). Open the source website to complete the Cloudflare check.`,
+        `Request failed (${response.status}). In Paperback, open the ${this.name} source home page and tap the cloud icon. Complete the Cloudflare check, then return and refresh the source.`,
       );
+    if (response.status !== 200)
+      throw new Error(`Request failed (${response.status}): ${response.request.url}`);
     if (response.data === undefined) throw new Error("The response has no data.");
     return response.data;
   }
