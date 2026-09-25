@@ -2,23 +2,20 @@
 /* Copyright © 2026 Inkdex */
 
 import {
-  type Chapter,
-  type ChapterDetails,
+  Chapter,
+  ChapterDetails,
   ContentRating,
-  type DiscoverSection,
-  type DiscoverSectionItem,
-  DiscoverSectionType,
-  type SearchQuery,
-  type SearchResultItem,
-  type SourceManga,
-  type Tag,
-  type TagSection,
+  SearchRequest,
+  PartialSourceManga,
+  SourceManga,
+  Tag,
+  TagSection,
 } from "@paperback/types";
-import { type SearchFilterValue } from "@paperback/types/lib/compat/0.8";
 import type { Cheerio, CheerioAPI } from "cheerio";
 import { Element } from "domhandler"; // Import Element from domhandler
+import { decodeHTML } from "entities";
 
-import { Mangabox } from "./main";
+import type { Mangabox } from "./main";
 
 export class MangaboxParser {
   async parseMangaDetails($: CheerioAPI, mangaId: string, source: Mangabox): Promise<SourceManga> {
@@ -47,9 +44,7 @@ export class MangaboxParser {
     let synopsis = $("#contentBox", context).first().text();
     synopsis = synopsis.replace(/You are reading.*bookmark\./i, "");
     synopsis = synopsis.replace(/<[^>]*>?/gm, "");
-    synopsis = Application.decodeHTMLEntities(synopsis.replace(/\s{2,}/g, " ").trim());
-
-    const shareUrl: string = `${source.domain}/manga/${mangaId}`;
+    synopsis = decodeHTML(synopsis.replace(/\s{2,}/g, " ").trim());
 
     const ratingParsed = $("#rate_row_cmd").text().trim();
     const rating: number = ((Number(ratingParsed.match(/rate\s*:\s*([\d.]+)/)?.[1]) || 0) / 10) * 2;
@@ -77,28 +72,28 @@ export class MangaboxParser {
         contentRating = ContentRating.ADULT;
       }
 
-      genres.push({ title: title, id: id });
+      genres.push(App.createTag({ label: title, id: id }));
     }
-    const tagGroups: TagSection[] = [{ title: "genres", id: "genres", tags: genres }];
+    const tagGroups: TagSection[] = [
+      App.createTagSection({ label: "Genres", id: "genres", tags: genres }),
+    ];
 
-    return {
-      mangaId,
-      mangaInfo: {
-        shareUrl: shareUrl,
-        rating: rating,
-        primaryTitle: title,
-        secondaryTitles: secondaryTitles,
-        thumbnailUrl: image,
+    return App.createSourceManga({
+      id: mangaId,
+      mangaInfo: App.createMangaInfo({
+        titles: [title, ...secondaryTitles],
+        image,
         author: authors,
-        tagGroups: tagGroups,
-        synopsis: synopsis,
-        contentRating: contentRating,
-        status: status,
-      },
-    };
+        desc: synopsis,
+        tags: tagGroups,
+        rating,
+        status,
+        hentai: contentRating === ContentRating.ADULT,
+      }),
+    });
   }
 
-  parseChapterList(json: any, sourceManga: SourceManga, source: Mangabox): Chapter[] {
+  parseChapterList(json: any, mangaId: string, source: Mangabox): Chapter[] {
     const chapters: Chapter[] = [];
 
     if (json.success && json.data && Array.isArray(json.data.chapters)) {
@@ -112,18 +107,19 @@ export class MangaboxParser {
         const chapNum = Number(item.chapter_num) || 0;
         const date = new Date(item.updated_at);
 
-        chapters.push({
-          sourceManga: sourceManga,
-          chapterId: id,
-          langCode: source.language,
-          chapNum: chapNum,
-          title: title,
-          publishDate: date,
-          sortingIndex: apiChapters.length - i,
-        });
+        chapters.push(
+          App.createChapter({
+            id,
+            langCode: source.language,
+            chapNum: chapNum,
+            name: title,
+            time: date,
+            sortingIndex: apiChapters.length - i,
+          }),
+        );
       }
     } else {
-      console.log(`Invalid JSON structure for manga ${sourceManga.mangaId}`);
+      throw new Error(`Invalid chapter data for manga ${mangaId}`);
     }
 
     return chapters;
@@ -131,7 +127,8 @@ export class MangaboxParser {
 
   async parseChapterDetails(
     $: CheerioAPI,
-    chapter: Chapter,
+    mangaId: string,
+    chapterId: string,
     source: Mangabox,
   ): Promise<ChapterDetails> {
     const pages: string[] = [];
@@ -139,85 +136,13 @@ export class MangaboxParser {
     for (const obj of $("img", "div.container-chapter-reader").toArray()) {
       const page = await this.getImageSrc($(obj), source);
       if (!page) {
-        console.log(
-          `Could not parse pages for mangaId:${chapter.sourceManga.mangaId} chapterId:${chapter.chapterId}`,
-        );
+        console.log(`Could not parse pages for mangaId:${mangaId} chapterId:${chapterId}`);
         continue;
       }
       pages.push(encodeURI(page));
     }
 
-    return {
-      id: chapter.chapterId,
-      mangaId: chapter.sourceManga.mangaId,
-      pages: pages,
-    };
-  }
-
-  async parseDiscoverSections(
-    $: CheerioAPI,
-    section: DiscoverSection,
-    source: Mangabox,
-  ): Promise<DiscoverSectionItem[]> {
-    const items: DiscoverSectionItem[] = [];
-
-    for (const obj of $("div.list-comic-item-wrap").toArray()) {
-      const image = encodeURI((await this.getImageSrc($("img", obj), source)) ?? "");
-      const title = $("img", obj).attr("alt")?.trim() ?? "";
-
-      const id = this.idCleaner($("a", obj).attr("href") ?? "");
-
-      const subtitle = $("a.list-story-item-wrap-chapter", obj).first().text().trim();
-
-      if (!id || !title) {
-        continue;
-      }
-
-      switch (section.type) {
-        case DiscoverSectionType.featured:
-          items.push({
-            mangaId: id,
-            imageUrl: image,
-            title: Application.decodeHTMLEntities(title),
-            supertitle: Application.decodeHTMLEntities(subtitle),
-            type: "featuredCarouselItem",
-          });
-          break;
-
-        case DiscoverSectionType.chapterUpdates:
-          items.push({
-            mangaId: id,
-            chapterId: "",
-            imageUrl: image,
-            title: Application.decodeHTMLEntities(title),
-            subtitle: Application.decodeHTMLEntities(subtitle),
-            type: "chapterUpdatesCarouselItem",
-          });
-          break;
-
-        case DiscoverSectionType.prominentCarousel:
-          items.push({
-            mangaId: id,
-            imageUrl: image,
-            title: Application.decodeHTMLEntities(title),
-            subtitle: Application.decodeHTMLEntities(subtitle),
-            type: "prominentCarouselItem",
-          });
-          break;
-
-        case DiscoverSectionType.simpleCarousel:
-          items.push({
-            mangaId: id,
-            imageUrl: image,
-            title: Application.decodeHTMLEntities(title),
-            subtitle: Application.decodeHTMLEntities(subtitle),
-            type: "simpleCarouselItem",
-          });
-          break;
-      }
-    }
-
-    return items;
+    return App.createChapterDetails({ id: chapterId, mangaId, pages });
   }
 
   async parseSearchTags($: CheerioAPI): Promise<TagSection[]> {
@@ -233,10 +158,12 @@ export class MangaboxParser {
         continue;
       }
 
-      genres.push({ title: title, id: id });
+      genres.push(App.createTag({ label: title, id: id }));
     }
 
-    const TagSections: TagSection[] = [{ title: "Genres", id: "genres", tags: genres }];
+    const TagSections: TagSection[] = [
+      App.createTagSection({ label: "Genres", id: "genres", tags: genres }),
+    ];
 
     return TagSections;
   }
@@ -244,9 +171,9 @@ export class MangaboxParser {
   async parseSearchResults(
     $: CheerioAPI,
     source: Mangabox,
-    query: SearchQuery<SearchFilterValue[]>,
-  ): Promise<SearchResultItem[]> {
-    const results: SearchResultItem[] = [];
+    query: SearchRequest,
+  ): Promise<PartialSourceManga[]> {
+    const results: PartialSourceManga[] = [];
 
     // Title Search
     if (query.title) {
@@ -261,12 +188,14 @@ export class MangaboxParser {
           continue;
         }
 
-        results.push({
-          mangaId: id,
-          imageUrl: image,
-          title: Application.decodeHTMLEntities(title),
-          subtitle: Application.decodeHTMLEntities(subtitle),
-        });
+        results.push(
+          App.createPartialSourceManga({
+            mangaId: id,
+            image: image,
+            title: decodeHTML(title),
+            subtitle: decodeHTML(subtitle),
+          }),
+        );
       }
       return results;
 
@@ -284,12 +213,14 @@ export class MangaboxParser {
           continue;
         }
 
-        results.push({
-          mangaId: id,
-          imageUrl: image,
-          title: Application.decodeHTMLEntities(title),
-          subtitle: Application.decodeHTMLEntities(subtitle),
-        });
+        results.push(
+          App.createPartialSourceManga({
+            mangaId: id,
+            image: image,
+            title: decodeHTML(title),
+            subtitle: decodeHTML(subtitle),
+          }),
+        );
       }
 
       return results;
@@ -327,7 +258,7 @@ export class MangaboxParser {
     // Malforumed url fix (Turns https:///example.com into https://example.com (or the http:// equivalent))
     image = image?.replace(/https:\/\/\//g, "https://"); // only changes urls with https protocol
 
-    return decodeURI(Application.decodeHTMLEntities(image ?? ""));
+    return decodeURI(decodeHTML(image ?? ""));
   }
 
   parseDate = (date: string): Date => {

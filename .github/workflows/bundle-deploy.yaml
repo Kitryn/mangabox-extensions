@@ -3,7 +3,7 @@ name: Bundle and Deploy
 on:
   push:
     branches:
-      - "[0-9]+.[0-9]+/*"
+      - "0.8/dev"
   workflow_dispatch:
 
 permissions:
@@ -23,12 +23,12 @@ jobs:
       - name: Setup Node.js Environment
         uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: 22
           cache: npm
       - name: Install Dependencies
         run: npm ci
-      - name: Bundle Extensions
-        run: npm run bundle
+      - name: Check and Test Extensions
+        run: npm run conformance
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:

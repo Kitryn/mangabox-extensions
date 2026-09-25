@@ -1,28 +1,44 @@
-# MangaBox Extensions
+# MangaBox Extensions for Paperback 0.8
 
-Paperback extensions for websites which use the generic MangaBox theme.
-
-## Available Extensions
-
-- [MangaBat](https://www.mangabats.com)
-- [MangaKakalot](https://www.mangakakalot.gg)
-- [MangaNato](https://www.manganato.gg)
-- [MangaNelo](https://www.nelomanga.net)
+This branch contains the Paperback 0.8 backport of MangaBat, MangaKakalot, MangaNato, and MangaNelo.
+The original source code is from Saw_6 and Inkdex. Kitryn maintains this backport.
 
 ## Installation
 
-To add these extensions to Paperback, it’s recommended to install the registry via the [installation page][registry-installation-page] on the Inkdex website. Alternatively, you can install just this repository by visiting [this webpage][repository-installation-page].
+1. Open the [installation page](https://kitryn.github.io/mangabox-extensions/0.8/dev/) on your device.
+2. Select **Add to Paperback**.
+3. Install the required sources in Paperback.
 
-## Support Guidelines
+You can also add this repository URL in Paperback:
 
-Need help? Check out our [Support Guidelines][support-guidelines] in the [registry repository][registry-repository]. Issues and discussions are disabled in the extension repositories and should be posted in the registry repository instead.
+```text
+https://kitryn.github.io/mangabox-extensions/0.8/dev/
+```
 
-## Contributing Guidelines
+Use this URL for Paperback 0.8. The `/0.9/stable/` URL contains the 0.9 extensions.
+If you added that URL before, remove it from the repository list and add the 0.8 URL.
 
-Want to contribute? Read the [Contributing Guidelines][contributing-guidelines] in the [registry repository][registry-repository] to get started.
+## Build and test
 
-[registry-installation-page]: https://inkdex.github.io/installation
-[repository-installation-page]: https://inkdex.github.io/mangabox-extensions/0.9/stable
-[support-guidelines]: https://github.com/inkdex/extensions/blob/master/.github/SUPPORT.md
-[registry-repository]: https://github.com/inkdex/extensions
-[contributing-guidelines]: https://github.com/inkdex/extensions/blob/master/.github/CONTRIBUTING.md
+Use Node.js 22.
+
+```sh
+npm ci
+npm run conformance
+```
+
+The build writes the installation page, `versioning.json`, source bundles, and icons to `bundles/`.
+The tests load all four bundles with a test model of the 0.8 API.
+They check source metadata, search, home sections, manga details, chapters, image URLs, and error handling.
+
+## Publication
+
+A push to `0.8/dev` runs the checks and copies the build to `gh-pages:0.8/dev/`.
+In the repository Pages settings, select **Deploy from a branch**, **gh-pages**, and **/(root)**.
+The deployment keeps other directories on `gh-pages`.
+
+## Test limits
+
+The build and local tests pass. The four source sites returned HTTP 403 during the live check.
+MangaBat returned a Cloudflare challenge header. This computer cannot confirm live reading in the iOS app.
+Complete the device checks in [the backport notes](docs/backport-0.8.md) before you use this branch as a stable release.
