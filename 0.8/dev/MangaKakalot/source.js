@@ -747,7 +747,7 @@ var _Sources = (() => {
   function sourceInfo(name, domain) {
     return {
       name,
-      version: "1.0.0",
+      version: "1.0.1",
       icon: "icon.png",
       language: "en",
       author: "Saw_6, Inkdex",
@@ -15226,10 +15226,12 @@ var _Sources = (() => {
         App.createRequest({ url: this.domain + path, method: "GET" }),
         1
       );
-      if (response.status !== 200)
+      if (response.status === 403 || response.status === 503)
         throw new Error(
-          `Request failed (${response.status}). Open the source website to complete the Cloudflare check.`
+          `Request failed (${response.status}). In Paperback, open the ${this.name} source home page and tap the cloud icon. Complete the Cloudflare check, then return and refresh the source.`
         );
+      if (response.status !== 200)
+        throw new Error(`Request failed (${response.status}): ${response.request.url}`);
       if (response.data === void 0) throw new Error("The response has no data.");
       return response.data;
     }
